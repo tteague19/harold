@@ -23,10 +23,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from pydantic_ai.messages import ModelMessage
 
+from harold.agents.coach import coach
 from harold.agents.scene_partner import scene_partner
 from harold.bootstrap import build_dependencies
 from harold.config import HaroldSettings
 from harold.dependencies import HaroldDependencies
+from harold.models.coaching import CoachingFeedback
 from harold.observability import setup_observability
 
 logger = logging.getLogger(__name__)
@@ -245,6 +247,31 @@ async def health() -> HealthResponse:
         A ``HealthResponse`` with status and version.
     """
     return HealthResponse(status="healthy", version=APP_VERSION)
+
+
+@app.post("/coach/{session_id}", response_model=CoachingFeedback)
+async def request_coaching(session_id: str) -> CoachingFeedback:
+    """Run the coaching agent and return structured feedback.
+
+    Analyzes the user's improv history via the trajectory memory
+    backend and returns UCB-grounded coaching advice.
+
+    Args:
+        session_id: The session identifier for context.
+
+    Returns:
+        A ``CoachingFeedback`` with strengths, growth areas, tips,
+        and a technique suggestion.
+    """
+    settings: HaroldSettings = app.state.settings
+    dependencies: HaroldDependencies = app.state.dependencies
+
+    result = await coach.run(
+        "Review my improv history and give me coaching feedback.",
+        deps=dependencies,
+        model=settings.llm_model,
+    )
+    return result.output
 
 
 @app.websocket("/ws/{session_id}")

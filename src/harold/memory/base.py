@@ -11,7 +11,15 @@ from typing import Protocol, runtime_checkable
 
 from harold.models.memory import KnowledgeEntry
 from harold.models.scene import SceneSummary
-from harold.models.types import DEFAULT_SEARCH_LIMIT, SearchLimit, SearchQuery
+from harold.models.types import (
+    DEFAULT_RECENT_SCENES_LIMIT,
+    DEFAULT_SEARCH_LIMIT,
+    DEFAULT_UNDERUSED_THRESHOLD,
+    SceneLimit,
+    SearchLimit,
+    SearchQuery,
+    TechniqueThreshold,
+)
 
 
 @runtime_checkable
@@ -93,5 +101,44 @@ class TrajectoryMemory(Protocol):
         Returns:
             A mapping of technique names to the number of times each
             was observed.
+        """
+        ...
+
+    async def get_scene_count(self) -> int:
+        """Return the total number of recorded scenes.
+
+        Returns:
+            The count of scenes in the trajectory store.
+        """
+        ...
+
+    async def get_recent_scenes(
+        self, limit: SceneLimit = DEFAULT_RECENT_SCENES_LIMIT
+    ) -> list[SceneSummary]:
+        """Return the most recently recorded scenes.
+
+        Args:
+            limit: Maximum number of scenes to return.
+
+        Returns:
+            A list of scene summaries ordered by most recent first.
+        """
+        ...
+
+    async def get_underused_techniques(
+        self,
+        threshold: TechniqueThreshold = DEFAULT_UNDERUSED_THRESHOLD,
+    ) -> list[str]:
+        """Return techniques used fewer times than the threshold.
+
+        Compares observed technique usage against a reference set of
+        core UCB improv techniques.
+
+        Args:
+            threshold: Techniques used fewer than this many times
+                are considered underused.
+
+        Returns:
+            A list of technique names that are underused or never used.
         """
         ...

@@ -22,6 +22,24 @@ SearchLimit = Annotated[
 ]
 """A positive integer capping the number of search results returned."""
 
+SceneLimit = Annotated[
+    int,
+    Field(ge=1, le=100, description="Maximum number of scenes to return"),
+]
+"""A positive integer capping the number of scenes returned."""
+
+TechniqueThreshold = Annotated[
+    int,
+    Field(
+        ge=0,
+        le=1000,
+        description="Usage count below which a technique is underused",
+    ),
+]
+"""A non-negative integer threshold for technique usage frequency."""
+
 DEFAULT_SEARCH_LIMIT = 5
 DEFAULT_SCENE_RECALL_LIMIT = 3
 DEFAULT_KNOWLEDGE_RECALL_LIMIT = 2
+DEFAULT_RECENT_SCENES_LIMIT = 5
+DEFAULT_UNDERUSED_THRESHOLD = 2

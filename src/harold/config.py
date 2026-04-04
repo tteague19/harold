@@ -24,6 +24,8 @@ DEFAULT_LLM_TEMPERATURE = 0.85
 DEFAULT_PHOENIX_ENDPOINT = "http://127.0.0.1:6006/v1/traces"
 DEFAULT_EMBEDDING_MODEL = "openai:text-embedding-3-small"
 DEFAULT_EMBEDDING_DIMENSIONS = 1536
+DEFAULT_NEO4J_URI = "neo4j://localhost:7687"
+DEFAULT_NEO4J_USER = "neo4j"
 
 
 class MemoryBackend(StrEnum):
@@ -43,9 +45,11 @@ class TrajectoryBackend(StrEnum):
 
     Attributes:
         IN_MEMORY: Dict-backed in-process storage.
+        NEO4J: Neo4j graph database for rich trajectory queries.
     """
 
     IN_MEMORY = "in_memory"
+    NEO4J = "neo4j"
 
 
 class HaroldSettings(BaseSettings):
@@ -56,6 +60,9 @@ class HaroldSettings(BaseSettings):
         llm_temperature: Sampling temperature for LLM responses.
         memory_backend: Which storage backend to use for long-term memory.
         trajectory_backend: Which storage backend to use for trajectory memory.
+        neo4j_uri: Neo4j connection URI for trajectory backend.
+        neo4j_user: Neo4j authentication username.
+        neo4j_password: Neo4j authentication password.
         pg_dsn: PostgreSQL connection string for pgvector backend.
         embedding_model: Pydantic AI embedding model identifier.
         embedding_dimensions: Dimensionality of the embedding vectors.
@@ -86,6 +93,20 @@ class HaroldSettings(BaseSettings):
     trajectory_backend: TrajectoryBackend = Field(
         default=TrajectoryBackend.IN_MEMORY,
         description="Storage backend for trajectory graph memory",
+    )
+
+    neo4j_uri: str = Field(
+        default=DEFAULT_NEO4J_URI,
+        description="Neo4j connection URI for trajectory backend",
+        examples=["neo4j://localhost:7687"],
+    )
+    neo4j_user: str = Field(
+        default=DEFAULT_NEO4J_USER,
+        description="Neo4j authentication username",
+    )
+    neo4j_password: str | None = Field(
+        default=None,
+        description="Neo4j authentication password",
     )
 
     pg_dsn: str | None = Field(

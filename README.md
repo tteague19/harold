@@ -155,6 +155,27 @@ uv run harold
 
 When using pgvector, the agent embeds scene summaries and knowledge entries via OpenAI's `text-embedding-3-small` model and stores them alongside their vectors. Searches use cosine similarity instead of keyword matching.
 
+## Coaching
+
+Harold includes an on-demand coaching agent that analyzes your improv history and provides UCB-grounded feedback.
+
+In the CLI, type `/coach` at any time. Via the API, send `POST /coach/{session_id}`. The coach examines your technique usage, recent scenes, and growth areas to provide specific, actionable advice.
+
+To enable rich trajectory tracking, use the Neo4j backend:
+
+```bash
+# Docker Compose already includes Neo4j
+docker compose up -d
+
+# Enable in .env by uncommenting:
+# HAROLD_TRAJECTORY_BACKEND=neo4j
+# HAROLD_NEO4J_PASSWORD=password
+
+uv run harold
+```
+
+The Neo4j web UI is available at [http://localhost:7474](http://localhost:7474).
+
 ## Development
 
 ```bash

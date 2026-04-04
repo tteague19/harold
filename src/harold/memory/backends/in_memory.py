@@ -11,7 +11,26 @@ from collections import Counter
 
 from harold.models.memory import KnowledgeEntry
 from harold.models.scene import SceneSummary
-from harold.models.types import DEFAULT_SEARCH_LIMIT, SearchLimit, SearchQuery
+from harold.models.types import (
+    DEFAULT_RECENT_SCENES_LIMIT,
+    DEFAULT_SEARCH_LIMIT,
+    DEFAULT_UNDERUSED_THRESHOLD,
+    SceneLimit,
+    SearchLimit,
+    SearchQuery,
+    TechniqueThreshold,
+)
+
+CORE_TECHNIQUES = [
+    "yes-and",
+    "heightening",
+    "callback",
+    "game-of-the-scene",
+    "emotional-truth",
+    "strong-choices",
+    "group-mind",
+    "if-this-is-true",
+]
 
 
 class InMemoryLongTermMemory:
@@ -135,3 +154,46 @@ class InMemoryTrajectoryMemory:
         for scene in self._scenes:
             counter.update(scene.techniques_used)
         return dict(counter)
+
+    async def get_scene_count(self) -> int:
+        """Return the total number of recorded scenes.
+
+        Returns:
+            The count of scenes stored in memory.
+        """
+        return len(self._scenes)
+
+    async def get_recent_scenes(
+        self, limit: SceneLimit = DEFAULT_RECENT_SCENES_LIMIT
+    ) -> list[SceneSummary]:
+        """Return the most recently recorded scenes.
+
+        Args:
+            limit: Maximum number of scenes to return.
+
+        Returns:
+            A list of scene summaries ordered by most recent first.
+        """
+        return list(reversed(self._scenes[-limit:]))
+
+    async def get_underused_techniques(
+        self,
+        threshold: TechniqueThreshold = DEFAULT_UNDERUSED_THRESHOLD,
+    ) -> list[str]:
+        """Return core techniques used fewer times than the threshold.
+
+        Compares observed technique usage against ``CORE_TECHNIQUES``.
+
+        Args:
+            threshold: Techniques used fewer than this many times
+                are considered underused.
+
+        Returns:
+            A list of technique names that are underused or never used.
+        """
+        frequency = await self.get_technique_frequency()
+        return [
+            technique
+            for technique in CORE_TECHNIQUES
+            if frequency.get(technique, 0) < threshold
+        ]

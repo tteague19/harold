@@ -20,11 +20,16 @@ uv run mypy src/               # Type check
 baml generate                  # Regenerate BAML client after editing baml_src/
 
 # pgvector memory backend
-docker compose up -d                           # Start PostgreSQL + pgvector
+docker compose up -d                           # Start PostgreSQL + pgvector + Neo4j
 uv run python scripts/seed_knowledge.py        # Seed UCB improv knowledge
 HAROLD_MEMORY_BACKEND=pgvector \
   HAROLD_PG_DSN=postgresql://postgres:postgres@localhost/harold \
   uv run harold                                # Run with pgvector
+
+# Neo4j trajectory backend
+HAROLD_TRAJECTORY_BACKEND=neo4j \
+  HAROLD_NEO4J_PASSWORD=password \
+  uv run harold                                # Run with Neo4j trajectories
 
 # Observability (Arize Phoenix)
 uv sync --extra phoenix                        # Install Phoenix UI

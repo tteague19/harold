@@ -14,17 +14,20 @@ from pydantic_ai.messages import ModelMessage
 from rich.console import Console
 from rich.prompt import Prompt
 
+from harold.agents.coach import coach
 from harold.agents.scene_partner import scene_partner
 from harold.bootstrap import build_dependencies
 from harold.config import HaroldSettings
 from harold.dependencies import HaroldDependencies
+from harold.models.coaching import CoachingFeedback
 from harold.observability import setup_observability
 
 GREETING = "[bold green]Harold[/] — Your AI Improv Partner"
 INSTRUCTIONS = (
     "Start a scene by saying something in character, "
-    "or type 'quit' to exit.\n"
+    "type '/coach' for feedback, or 'quit' to exit.\n"
 )
+COACH_COMMAND = "/coach"
 FAREWELL = "[dim]Scene over. Thanks for playing![/]"
 USER_PROMPT_STYLE = "[bold blue]You[/]"
 HAROLD_PROMPT_STYLE = "[bold yellow]Harold[/]"
@@ -82,6 +85,56 @@ def render_response(
         )
 
 
+def render_coaching_feedback(
+    console: Console,
+    feedback: CoachingFeedback,
+) -> None:
+    """Display coaching feedback with Rich formatting.
+
+    Args:
+        console: The Rich console instance for output.
+        feedback: The structured coaching feedback to render.
+    """
+    console.print("\n[bold magenta]Coach's Feedback[/]\n")
+
+    console.print("[bold green]Strengths:[/]")
+    for strength in feedback.strengths:
+        console.print(f"  + {strength}")
+
+    console.print("\n[bold yellow]Growth Areas:[/]")
+    for area in feedback.growth_areas:
+        console.print(f"  - {area}")
+
+    console.print("\n[bold cyan]Tips:[/]")
+    for tip in feedback.specific_tips:
+        console.print(f"  * {tip}")
+
+    console.print(
+        f"\n[bold]Try next:[/] {feedback.technique_suggestion}\n"
+    )
+
+
+async def run_coaching(
+    settings: HaroldSettings,
+    dependencies: HaroldDependencies,
+    console: Console,
+) -> None:
+    """Run the coaching agent and render its feedback.
+
+    Args:
+        settings: Application configuration for model selection.
+        dependencies: The wired dependency container for the agent.
+        console: The Rich console instance for output.
+    """
+    console.print("[dim]Analyzing your improv history...[/]")
+    result = await coach.run(
+        "Review my improv history and give me coaching feedback.",
+        deps=dependencies,
+        model=settings.llm_model,
+    )
+    render_coaching_feedback(console, result.output)
+
+
 async def run_session(
     settings: HaroldSettings,
     dependencies: HaroldDependencies,
@@ -109,6 +162,10 @@ async def run_session(
         if _is_quit_command(user_input):
             console.print(FAREWELL)
             break
+
+        if user_input.strip().lower() == COACH_COMMAND:
+            await run_coaching(settings, dependencies, console)
+            continue
 
         result = await scene_partner.run(
             user_input,
