@@ -1,3 +1,6 @@
+# BAML auto-generated client
+baml_client/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
