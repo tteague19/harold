@@ -11,7 +11,8 @@ Harold is an AI improviser and comedy coach built with Pydantic AI and BAML. Pyt
 ```bash
 uv sync                        # Install/sync dependencies
 uv run harold                  # Run the CLI
-uv run python -m harold        # Alternative entry point
+uv run harold-api              # Run the FastAPI server (localhost:8000)
+uv run python -m harold        # Alternative CLI entry point
 uv run pytest                  # Run tests
 uv run pytest tests/test_memory.py -v  # Run a single test file
 uv run ruff check src/ tests/  # Lint
@@ -38,7 +39,7 @@ HAROLD_PHOENIX_ENABLED=true uv run harold      # Run with tracing enabled
 - **Pydantic AI**: Agent orchestration, tools, dependency injection, conversation history
 - **BAML**: Prompt templates and standalone structured extractions (in `baml_src/`)
 - **Memory**: Protocol-based backends (in-memory MVP, pgvector and Neo4j planned)
-- **Interfaces**: CLI first (`interfaces/cli.py`), API planned (`interfaces/api.py`)
+- **Interfaces**: CLI (`interfaces/cli.py`) and FastAPI WebSocket (`interfaces/api.py`)
 
 ## Code Style
 

@@ -15,14 +15,9 @@ from rich.console import Console
 from rich.prompt import Prompt
 
 from harold.agents.scene_partner import scene_partner
-from harold.config import HaroldSettings, MemoryBackend
+from harold.bootstrap import build_dependencies
+from harold.config import HaroldSettings
 from harold.dependencies import HaroldDependencies
-from harold.memory.backends.in_memory import (
-    InMemoryLongTermMemory,
-    InMemoryTrajectoryMemory,
-)
-from harold.memory.backends.pgvector import PgVectorLongTermMemory
-from harold.memory.base import LongTermMemory
 from harold.observability import setup_observability
 
 GREETING = "[bold green]Harold[/] — Your AI Improv Partner"
@@ -62,47 +57,6 @@ def _is_quit_command(text: str) -> bool:
         ``True`` if the input matches any ``QuitCommand`` value.
     """
     return text.strip().lower() in {cmd.value for cmd in QuitCommand}
-
-
-async def _create_long_term_memory(
-    settings: HaroldSettings,
-) -> LongTermMemory:
-    """Create the long-term memory backend based on configuration.
-
-    Args:
-        settings: Application configuration controlling backend selection.
-
-    Returns:
-        A ``LongTermMemory`` implementation matching the configured backend.
-
-    Raises:
-        ValueError: If ``HAROLD_PG_DSN`` is not set when pgvector is selected.
-    """
-    if settings.memory_backend == MemoryBackend.PGVECTOR:
-        return await PgVectorLongTermMemory.create(settings)
-    return InMemoryLongTermMemory()
-
-
-async def build_dependencies(
-    settings: HaroldSettings,
-) -> HaroldDependencies:
-    """Construct the dependency container from application settings.
-
-    Selects backend implementations based on configuration and wires
-    them into the dependency container.
-
-    Args:
-        settings: Application configuration controlling backend selection.
-
-    Returns:
-        A fully wired ``HaroldDependencies`` instance ready for agent use.
-    """
-    long_term_memory = await _create_long_term_memory(settings)
-    return HaroldDependencies(
-        settings=settings,
-        long_term_memory=long_term_memory,
-        trajectory_memory=InMemoryTrajectoryMemory(),
-    )
 
 
 def render_response(

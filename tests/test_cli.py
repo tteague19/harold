@@ -12,11 +12,11 @@ from hypothesis import given
 from hypothesis import strategies as st
 from rich.console import Console
 
+from harold.bootstrap import build_dependencies
 from harold.config import HaroldSettings
 from harold.interfaces.cli import (
     QuitCommand,
     _is_quit_command,
-    build_dependencies,
     render_response,
 )
 from harold.memory.backends.in_memory import (

@@ -41,7 +41,7 @@ Scene Partner Agent  (Pydantic AI Agent[HaroldDependencies, SceneResponse])
 - **Pydantic AI** handles agent orchestration, tool calling, dependency injection, and conversation history.
 - **BAML** manages prompt templates and standalone structured extractions (scene summarization, knowledge extraction).
 - **Memory backends** are swappable via Protocol-based abstractions. The default uses in-memory stores; pgvector is available for semantic search, and a Neo4j backend is planned.
-- **Interfaces** are decoupled from core logic. CLI ships first; a FastAPI WebSocket interface is planned.
+- **Interfaces** are decoupled from core logic. Both a Rich CLI and a FastAPI WebSocket API are available, sharing the same agent and dependency wiring via `bootstrap.py`.
 
 ## Project Structure
 
@@ -49,6 +49,7 @@ Scene Partner Agent  (Pydantic AI Agent[HaroldDependencies, SceneResponse])
 src/harold/
     __main__.py          # Entry point (python -m harold)
     config.py            # Settings via pydantic-settings (HAROLD_* env vars)
+    bootstrap.py         # Shared dependency wiring for CLI and API
     dependencies.py      # Dependency container for agent injection
     observability.py     # OpenTelemetry + Phoenix bootstrap
     agents/
@@ -69,6 +70,7 @@ src/harold/
         types.py         # Shared annotated types and constants
     interfaces/
         cli.py           # Rich-based terminal REPL
+        api.py           # FastAPI WebSocket server
 baml_src/
     clients.baml         # LLM provider configuration
     scene.baml           # Scene analysis types and functions
@@ -93,6 +95,23 @@ All `HAROLD_*` variables are loaded from a `.env` file automatically via pydanti
 | `HAROLD_EMBEDDING_DIMENSIONS` | `1536` | Dimensionality of embedding vectors |
 | `HAROLD_PHOENIX_ENABLED` | `false` | Enable Arize Phoenix tracing |
 | `HAROLD_PHOENIX_ENDPOINT` | `http://127.0.0.1:6006/v1/traces` | OTLP endpoint for Phoenix |
+
+## API Server
+
+Harold also runs as a FastAPI server with a streaming WebSocket endpoint.
+
+```bash
+# Start the API server
+uv run harold-api
+
+# Or with auto-reload for development
+uv run uvicorn harold.interfaces.api:app --reload
+```
+
+- **`GET /health`** — Health check returning status and version
+- **`WebSocket /ws/{session_id}`** — Streaming improv session
+
+The WebSocket accepts JSON messages `{"type": "message", "content": "..."}` and streams back partial text chunks (`{"type": "stream", "content": "..."}`) followed by the complete structured response (`{"type": "response", "dialogue": "...", ...}`).
 
 ## Observability
 
