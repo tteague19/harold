@@ -3,14 +3,21 @@
 All settings use the ``HAROLD_`` prefix and are validated by pydantic-settings
 at startup. Every external dependency defaults to the simplest option so
 the MVP runs with only an Anthropic API key.
+
+Non-prefixed variables (``ANTHROPIC_API_KEY``, ``OPENAI_API_KEY``) are
+loaded into the process environment via ``dotenv.load_dotenv`` so that
+third-party SDKs can discover them.
 """
 
 from __future__ import annotations
 
 from enum import StrEnum
 
+from dotenv import load_dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+load_dotenv()
 
 DEFAULT_LLM_MODEL = "anthropic:claude-sonnet-4-20250514"
 DEFAULT_LLM_TEMPERATURE = 0.85
@@ -57,7 +64,7 @@ class HaroldSettings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_prefix="HAROLD_", env_file=".env"
+        env_prefix="HAROLD_", env_file=".env", extra="ignore"
     )
 
     llm_model: str = Field(
