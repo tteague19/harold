@@ -29,6 +29,8 @@ HAROLD_MEMORY_BACKEND=pgvector \
 uv sync --extra phoenix                        # Install Phoenix UI
 phoenix serve                                  # Start Phoenix at localhost:6006
 HAROLD_PHOENIX_ENABLED=true uv run harold      # Run with tracing enabled
+
+# All HAROLD_* vars and API keys can also be set in .env (loaded automatically)
 ```
 
 ## Architecture

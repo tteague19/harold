@@ -12,7 +12,8 @@ git clone <repo-url> && cd harold
 uv sync
 
 # Configure your API key
-export ANTHROPIC_API_KEY=sk-ant-...
+cp .env.example .env
+# Edit .env and set ANTHROPIC_API_KEY
 
 # Start improvising
 uv run harold
@@ -39,7 +40,7 @@ Scene Partner Agent  (Pydantic AI Agent[HaroldDependencies, SceneResponse])
 
 - **Pydantic AI** handles agent orchestration, tool calling, dependency injection, and conversation history.
 - **BAML** manages prompt templates and standalone structured extractions (scene summarization, knowledge extraction).
-- **Memory backends** are swappable via Protocol-based abstractions. The MVP uses in-memory stores; pgvector and Neo4j backends are planned.
+- **Memory backends** are swappable via Protocol-based abstractions. The default uses in-memory stores; pgvector is available for semantic search, and a Neo4j backend is planned.
 - **Interfaces** are decoupled from core logic. CLI ships first; a FastAPI WebSocket interface is planned.
 
 ## Project Structure
@@ -58,8 +59,10 @@ src/harold/
         scene_tools.py   # Scene start/end lifecycle
     memory/
         base.py          # LongTermMemory + TrajectoryMemory protocols
+        embeddings.py    # Pydantic AI Embedder wrapper with caching
         backends/
             in_memory.py # MVP keyword-matching backends
+            pgvector.py  # PostgreSQL + pgvector semantic search
     models/
         scene.py         # SceneResponse, SceneState, Turn, SceneSummary
         memory.py        # KnowledgeEntry, KnowledgeCategory
@@ -69,21 +72,27 @@ src/harold/
 baml_src/
     clients.baml         # LLM provider configuration
     scene.baml           # Scene analysis types and functions
+scripts/
+    seed_knowledge.py    # Populate pgvector with UCB improv principles
 ```
 
 ## Environment Variables
 
+All `HAROLD_*` variables are loaded from a `.env` file automatically via pydantic-settings. Copy `.env.example` to `.env` and fill in your keys to get started.
+
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ANTHROPIC_API_KEY` | (required) | Anthropic API key for Claude access |
+| `OPENAI_API_KEY` | (required for pgvector) | OpenAI API key for embeddings |
 | `HAROLD_LLM_MODEL` | `anthropic:claude-sonnet-4-20250514` | Pydantic AI model identifier |
 | `HAROLD_LLM_TEMPERATURE` | `0.85` | Sampling temperature (0.0-2.0) |
-| `HAROLD_MEMORY_BACKEND` | `in_memory` | Long-term memory backend |
+| `HAROLD_MEMORY_BACKEND` | `in_memory` | Long-term memory backend (`in_memory` or `pgvector`) |
 | `HAROLD_TRAJECTORY_BACKEND` | `in_memory` | Trajectory memory backend |
+| `HAROLD_PG_DSN` | `None` | PostgreSQL connection string (required for pgvector) |
+| `HAROLD_EMBEDDING_MODEL` | `openai:text-embedding-3-small` | Pydantic AI embedding model identifier |
+| `HAROLD_EMBEDDING_DIMENSIONS` | `1536` | Dimensionality of embedding vectors |
 | `HAROLD_PHOENIX_ENABLED` | `false` | Enable Arize Phoenix tracing |
 | `HAROLD_PHOENIX_ENDPOINT` | `http://127.0.0.1:6006/v1/traces` | OTLP endpoint for Phoenix |
-
-Copy `.env.example` to `.env` and fill in your API key to get started.
 
 ## Observability
 
@@ -96,8 +105,11 @@ uv sync --extra phoenix
 # Start Phoenix in one terminal
 phoenix serve
 
-# Run Harold with tracing in another terminal
-HAROLD_PHOENIX_ENABLED=true uv run harold
+# Enable tracing in .env
+# HAROLD_PHOENIX_ENABLED=true
+
+# Run Harold (picks up .env automatically)
+uv run harold
 ```
 
 Open [http://localhost:6006](http://localhost:6006) to see traces. Each agent turn produces a trace showing the LLM request/response, any tool calls, token counts, and latency breakdown.
@@ -110,10 +122,10 @@ For semantic search over past scenes and improv knowledge, Harold supports Postg
 # Start PostgreSQL with pgvector
 docker compose up -d
 
-# Set environment variables
-export OPENAI_API_KEY=sk-...
-export HAROLD_MEMORY_BACKEND=pgvector
-export HAROLD_PG_DSN=postgresql://postgres:postgres@localhost/harold
+# Enable pgvector in .env by uncommenting:
+# OPENAI_API_KEY=sk-...
+# HAROLD_MEMORY_BACKEND=pgvector
+# HAROLD_PG_DSN=postgresql://postgres:postgres@localhost/harold
 
 # Seed the knowledge base with UCB improv principles (one-time)
 uv run python scripts/seed_knowledge.py
