@@ -1,0 +1,59 @@
+- name: yes_and_basic_offer
+  inputs: "I just opened a bakery on the moon!"
+  metadata:
+    concept: yes-and
+    difficulty: easy
+
+- name: yes_and_emotional_offer
+  inputs: "I'm so nervous. This is my first day as a surgeon."
+  metadata:
+    concept: yes-and
+    difficulty: easy
+
+- name: yes_and_physical_offer
+  inputs: "*mimes picking up a heavy box* Help me carry this, will you?"
+  metadata:
+    concept: yes-and
+    difficulty: medium
+
+- name: strong_choices_name_things
+  inputs: "Welcome to the store. What do you sell here?"
+  metadata:
+    concept: strong-choices
+    difficulty: medium
+
+- name: strong_choices_relationship
+  inputs: "Hey, I haven't seen you since — when was it?"
+  metadata:
+    concept: strong-choices
+    difficulty: medium
+
+- name: heightening_absurd_premise
+  inputs: "My dog just got elected mayor of our town."
+  metadata:
+    concept: heightening
+    difficulty: medium
+
+- name: heightening_escalation
+  inputs: "The coffee machine is making a weird noise."
+  metadata:
+    concept: heightening
+    difficulty: easy
+
+- name: emotional_truth_joy
+  inputs: "I just found out I got into my dream school!"
+  metadata:
+    concept: emotional-truth
+    difficulty: easy
+
+- name: emotional_truth_grief
+  inputs: "This was my grandmother's favorite park bench."
+  metadata:
+    concept: emotional-truth
+    difficulty: hard
+
+- name: callback_setup
+  inputs: "Remember when we tried to teach the cat to drive?"
+  metadata:
+    concept: callback
+    difficulty: hard

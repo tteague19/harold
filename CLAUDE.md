@@ -36,6 +36,10 @@ uv sync --extra phoenix                        # Install Phoenix UI
 phoenix serve                                  # Start Phoenix at localhost:6006
 HAROLD_PHOENIX_ENABLED=true uv run harold      # Run with tracing enabled
 
+# Smoke test and evaluation
+uv run python scripts/smoke_test.py            # Programmatic smoke test
+uv run python evals/run_evals.py               # Run improv quality eval suite
+
 # All HAROLD_* vars and API keys can also be set in .env (loaded automatically)
 ```
 

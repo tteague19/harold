@@ -206,3 +206,17 @@ baml generate
 ```
 
 Tests use `StubModel` (aliased from Pydantic AI's `TestModel`) to avoid real API calls. The test suite includes parametrized tests and property-based tests via Hypothesis.
+
+## Evaluation
+
+Harold includes a `pydantic-evals` based evaluation suite that measures improv quality against UCB principles.
+
+```bash
+# Programmatic smoke test (requires ANTHROPIC_API_KEY)
+uv run python scripts/smoke_test.py
+
+# Full eval suite with LLM judges (requires ANTHROPIC_API_KEY)
+uv run python evals/run_evals.py
+```
+
+The eval suite tests 10 cases across five UCB concepts (yes-and, strong choices, heightening, emotional truth, callbacks) using both deterministic evaluators (negation detection, information novelty) and LLM judges. When Phoenix is enabled, eval traces are visible alongside regular agent traces.
