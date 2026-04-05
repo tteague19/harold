@@ -72,7 +72,7 @@ async def smoke_test() -> bool:
 
         logger.info(
             "Harold: %s [%s]",
-            result.output.dialogue[:80],
+            result.output.dialogue,
             result.output.emotional_tone,
         )
 
