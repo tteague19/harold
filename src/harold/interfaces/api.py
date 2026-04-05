@@ -28,7 +28,12 @@ from harold.agents import coach, pattern_analyzer, scene_partner
 from harold.bootstrap import build_dependencies
 from harold.config import HaroldSettings
 from harold.dependencies import HaroldDependencies
+from harold.interfaces.scene_management import (
+    ensure_scene_active,
+    track_turn,
+)
 from harold.models.coaching import CoachingFeedback
+from harold.models.scene import Speaker
 from harold.models.workflow import ImprovWorkflow
 from harold.observability import setup_observability
 
@@ -153,6 +158,11 @@ async def _stream_agent_response(
 
     output = await stream.get_output()
     message_history.extend(stream.new_messages())
+    track_turn(
+        dependencies=dependencies,
+        speaker=Speaker.HAROLD,
+        content=output.dialogue,
+    )
 
     await websocket.send_json(
         {
@@ -189,6 +199,13 @@ async def _handle_session_loop(
         if content is None:
             await _send_error(websocket, "Empty message content")
             continue
+
+        ensure_scene_active(dependencies=dependencies)
+        track_turn(
+            dependencies=dependencies,
+            speaker=Speaker.USER,
+            content=content,
+        )
 
         await _stream_agent_response(
             websocket,

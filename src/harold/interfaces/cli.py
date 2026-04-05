@@ -29,6 +29,7 @@ from harold.interfaces.rendering import (
 )
 from harold.interfaces.scene_management import (
     end_current_scene,
+    ensure_scene_active,
     run_streaming_turn,
     track_turn,
 )
@@ -223,6 +224,10 @@ async def run_session(
         user_input = Prompt.ask(USER_PROMPT_STYLE)
 
         if _is_quit_command(user_input):
+            if dependencies.current_scene is not None:
+                await end_current_scene(
+                    dependencies=dependencies, console=console
+                )
             console.print("[dim]Scene over. Thanks for playing![/]")
             break
 
@@ -235,6 +240,8 @@ async def run_session(
         )
         if handled:
             continue
+
+        ensure_scene_active(dependencies=dependencies)
 
         track_turn(
             dependencies=dependencies,

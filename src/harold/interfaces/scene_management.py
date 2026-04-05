@@ -20,10 +20,33 @@ from harold.interfaces.rendering import (
     STAGE_DIRECTION_STYLE,
     StreamingTurnResult,
 )
-from harold.models.scene import Speaker, Turn
+from harold.models.scene import SceneState, Speaker, Turn
 from harold.tools.scene_tools import _summarize_and_persist
 
 LIVE_REFRESH_PER_SECOND = 15
+DEFAULT_SCENE_SETTING = "free scene"
+DEFAULT_SCENE_SUGGESTION = "open"
+
+
+def ensure_scene_active(
+    *, dependencies: HaroldDependencies
+) -> None:
+    """Create a default scene if none is currently active.
+
+    Ensures that turn tracking and scene persistence work even
+    when the user starts talking without an explicit scene setup.
+
+    Args:
+        dependencies: The wired dependency container. A new
+            ``SceneState`` is created on it if ``current_scene``
+            is ``None``.
+    """
+    if dependencies.current_scene is not None:
+        return
+    dependencies.current_scene = SceneState(
+        setting=DEFAULT_SCENE_SETTING,
+        suggestion=DEFAULT_SCENE_SUGGESTION,
+    )
 
 
 def track_turn(
