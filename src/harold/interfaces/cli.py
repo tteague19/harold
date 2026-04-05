@@ -8,11 +8,14 @@ dependencies and agent can be exposed via other interfaces (e.g. API).
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
 from enum import StrEnum
 
 from pydantic_ai.messages import ModelMessage
 from rich.console import Console
+from rich.live import Live
 from rich.prompt import Prompt
+from rich.text import Text
 
 from harold.agents.coach import coach
 from harold.agents.pattern_analyzer import pattern_analyzer
@@ -21,21 +24,43 @@ from harold.bootstrap import build_dependencies
 from harold.config import HaroldSettings
 from harold.dependencies import HaroldDependencies
 from harold.models.coaching import CoachingFeedback
+from harold.models.scene import SceneResponse, Speaker, Turn
 from harold.models.workflow import ImprovWorkflow
 from harold.observability import setup_observability
+from harold.tools.scene_tools import _summarize_and_persist
 
 GREETING = "[bold green]Harold[/] — Your AI Improv Partner"
 INSTRUCTIONS = (
     "Start a scene by saying something in character, "
     "type '/coach' for feedback, '/analyze' to discover "
-    "patterns, or 'quit' to exit.\n"
+    "patterns, '/endscene' to end the current scene, "
+    "or 'quit' to exit.\n"
 )
 COACH_COMMAND = "/coach"
 ANALYZE_COMMAND = "/analyze"
+END_SCENE_COMMAND = "/endscene"
 FAREWELL = "[dim]Scene over. Thanks for playing![/]"
 USER_PROMPT_STYLE = "[bold blue]You[/]"
 HAROLD_PROMPT_STYLE = "[bold yellow]Harold[/]"
 STAGE_DIRECTION_STYLE = "[dim italic]"
+LIVE_REFRESH_PER_SECOND = 15
+
+
+@dataclass
+class StreamingTurnResult:
+    """Result of a single streaming agent turn.
+
+    Bundles the structured output with the new messages generated
+    during the turn, so callers don't need to manage both separately.
+
+    Attributes:
+        output: The agent's structured SceneResponse.
+        new_messages: Messages generated during this turn, to be
+            appended to the conversation history.
+    """
+
+    output: SceneResponse
+    new_messages: list[ModelMessage]
 
 
 class QuitCommand(StrEnum):
@@ -189,6 +214,111 @@ async def run_analysis(
     render_workflows(console, workflows)
 
 
+async def run_end_scene(
+    dependencies: HaroldDependencies,
+    console: Console,
+) -> None:
+    """End the current scene, summarize it, and persist to memory.
+
+    Args:
+        dependencies: The wired dependency container with the active scene.
+        console: The Rich console instance for output.
+    """
+    if dependencies.current_scene is None:
+        console.print("[dim]No scene is currently active.[/]")
+        return
+
+    scene = dependencies.current_scene
+    dependencies.current_scene = None
+
+    if not scene.turns:
+        console.print("[dim]Scene ended with no turns recorded.[/]")
+        return
+
+    console.print("[dim]Summarizing scene...[/]")
+    summary = await _summarize_and_persist(scene, dependencies)
+    console.print(f"[bold green]Scene saved:[/] {summary.summary}\n")
+
+
+def _track_turn(
+    dependencies: HaroldDependencies,
+    speaker: Speaker,
+    content: str,
+) -> None:
+    """Append a turn to the active scene's turn history.
+
+    No-op if no scene is currently active.
+
+    Args:
+        dependencies: The wired dependency container with the scene state.
+        speaker: Who delivered this beat.
+        content: The spoken or narrated content.
+    """
+    if dependencies.current_scene is None:
+        return
+    dependencies.current_scene.turns.append(
+        Turn(speaker=speaker, content=content)
+    )
+
+
+async def run_streaming_turn(
+    user_input: str,
+    settings: HaroldSettings,
+    dependencies: HaroldDependencies,
+    message_history: list[ModelMessage],
+    console: Console,
+) -> StreamingTurnResult:
+    """Run the scene partner agent with streaming output.
+
+    Displays partial dialogue via Rich Live as it arrives from
+    the LLM, then prints the final response with stage direction.
+
+    Args:
+        user_input: The user's scene contribution.
+        settings: Application configuration for model selection.
+        dependencies: The wired dependency container for the agent.
+        message_history: The accumulated conversation history.
+        console: The Rich console instance for live output.
+
+    Returns:
+        A ``StreamingTurnResult`` containing the structured output
+        and new messages from this turn.
+    """
+    previous_dialogue = ""
+    async with scene_partner.run_stream(
+        user_input,
+        deps=dependencies,
+        message_history=message_history,
+        model=settings.llm_model,
+    ) as stream:
+        with Live(
+            Text(""), console=console,
+            refresh_per_second=LIVE_REFRESH_PER_SECOND,
+        ) as live:
+            async for partial in stream.stream_output(
+                debounce_by=None
+            ):
+                current = partial.dialogue
+                if not current or current == previous_dialogue:
+                    continue
+                live.update(Text(f"Harold: {current}"))
+                previous_dialogue = current
+
+    output = await stream.get_output()
+    new_messages = stream.new_messages()
+
+    console.print(f"{HAROLD_PROMPT_STYLE}: {output.dialogue}")
+    if output.stage_direction:
+        console.print(
+            f"  {STAGE_DIRECTION_STYLE}"
+            f"*{output.stage_direction}*[/]"
+        )
+
+    return StreamingTurnResult(
+        output=output, new_messages=new_messages
+    )
+
+
 async def run_session(
     settings: HaroldSettings,
     dependencies: HaroldDependencies,
@@ -225,18 +355,19 @@ async def run_session(
             await run_analysis(settings, dependencies, console)
             continue
 
-        result = await scene_partner.run(
-            user_input,
-            deps=dependencies,
-            message_history=message_history,
-            model=settings.llm_model,
-        )
+        if user_input.strip().lower() == END_SCENE_COMMAND:
+            await run_end_scene(dependencies, console)
+            continue
 
-        message_history.extend(result.new_messages())
-        render_response(
+        _track_turn(dependencies, Speaker.USER, user_input)
+
+        turn_result = await run_streaming_turn(
+            user_input, settings, dependencies, message_history,
             console,
-            result.output.dialogue,
-            result.output.stage_direction,
+        )
+        message_history.extend(turn_result.new_messages)
+        _track_turn(
+            dependencies, Speaker.HAROLD, turn_result.output.dialogue
         )
 
 
