@@ -12,7 +12,7 @@ from rich.console import Console
 from rich.live import Live
 from rich.text import Text
 
-from harold.agents.scene_partner import scene_partner
+from harold.agents import scene_partner
 from harold.config import HaroldSettings
 from harold.dependencies import HaroldDependencies
 from harold.interfaces.rendering import (

@@ -266,7 +266,7 @@ class Neo4jTrajectoryMemory:
                 setting=record["setting"],
                 suggestion=record["suggestion"],
                 summary=record["summary"],
-                key_moments=list(record["key_moments"]),
+                key_moments=list(record["key_moments"] or []),
                 techniques_used=record["techniques"] or [],
                 duration_turns=record["duration_turns"],
             )

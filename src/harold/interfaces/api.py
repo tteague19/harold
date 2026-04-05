@@ -24,9 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from pydantic_ai.messages import ModelMessage
 
-from harold.agents.coach import coach
-from harold.agents.pattern_analyzer import pattern_analyzer
-from harold.agents.scene_partner import scene_partner
+from harold.agents import coach, pattern_analyzer, scene_partner
 from harold.bootstrap import build_dependencies
 from harold.config import HaroldSettings
 from harold.dependencies import HaroldDependencies
@@ -88,10 +86,13 @@ def _parse_client_message(raw: str) -> str | None:
         raw: The raw JSON string received from the client.
 
     Returns:
-        The message content, or ``None`` if the content is empty
-        or missing.
+        The message content, or ``None`` if the content is empty,
+        missing, or the JSON is malformed.
     """
-    data = json.loads(raw)
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
     content = data.get("content", "")
     return content if content else None
 
@@ -218,8 +219,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     app.state.settings = settings
     app.state.dependencies = dependencies
-    sessions: dict[str, list[ModelMessage]] = {}
-    app.state.sessions = sessions
 
     logger.info("Harold API started")
     yield
@@ -312,9 +311,8 @@ async def websocket_session(
 ) -> None:
     """Handle a streaming improv session over WebSocket.
 
-    Maintains per-session conversation history. For each user message,
-    streams partial text chunks from the LLM, then sends the complete
-    structured SceneResponse.
+    Each connection gets its own isolated message history that
+    persists for the duration of the connection.
 
     Args:
         websocket: The WebSocket connection.
@@ -326,14 +324,7 @@ async def websocket_session(
     dependencies: HaroldDependencies = (
         websocket.app.state.dependencies
     )
-    sessions: dict[str, list[ModelMessage]] = (
-        websocket.app.state.sessions
-    )
-
-    if session_id not in sessions:
-        sessions[session_id] = []
-
-    message_history = sessions[session_id]
+    message_history: list[ModelMessage] = []
 
     try:
         await _handle_session_loop(

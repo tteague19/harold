@@ -14,8 +14,7 @@ from pydantic_ai.messages import ModelMessage
 from rich.console import Console
 from rich.prompt import Prompt
 
-from harold.agents.coach import coach
-from harold.agents.pattern_analyzer import pattern_analyzer
+from harold.agents import coach, pattern_analyzer
 from harold.bootstrap import build_dependencies
 from harold.config import HaroldSettings
 from harold.dependencies import HaroldDependencies
