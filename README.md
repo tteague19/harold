@@ -40,7 +40,7 @@ Scene Partner Agent  (Pydantic AI Agent[HaroldDependencies, SceneResponse])
 
 - **Pydantic AI** handles agent orchestration, tool calling, dependency injection, and conversation history.
 - **BAML** manages prompt templates and standalone structured extractions (scene summarization, knowledge extraction).
-- **Memory backends** are swappable via Protocol-based abstractions. The default uses in-memory stores; pgvector is available for semantic search, and a Neo4j backend is planned.
+- **Memory backends** are swappable via Protocol-based abstractions. The default uses in-memory stores; pgvector provides semantic search for long-term memory, and Neo4j provides graph-based trajectory tracking.
 - **Interfaces** are decoupled from core logic. Both a Rich CLI and a FastAPI WebSocket API are available, sharing the same agent and dependency wiring via `bootstrap.py`.
 
 ## Project Structure
@@ -54,19 +54,24 @@ src/harold/
     observability.py     # OpenTelemetry + Phoenix bootstrap
     agents/
         scene_partner.py # Core improv agent definition
+        coach.py         # On-demand coaching agent
         prompts.py       # UCB-grounded system prompt
     tools/
         memory_tools.py  # Scene recall and knowledge lookup
         scene_tools.py   # Scene start/end lifecycle
+        coaching_tools.py # Trajectory query tools for coach
     memory/
         base.py          # LongTermMemory + TrajectoryMemory protocols
         embeddings.py    # Pydantic AI Embedder wrapper with caching
         backends/
             in_memory.py # MVP keyword-matching backends
             pgvector.py  # PostgreSQL + pgvector semantic search
+            neo4j.py     # Neo4j graph trajectory backend
     models/
         scene.py         # SceneResponse, SceneState, Turn, SceneSummary
         memory.py        # KnowledgeEntry, KnowledgeCategory
+        coaching.py      # CoachingFeedback structured output
+        techniques.py    # Shared CORE_TECHNIQUES reference list
         types.py         # Shared annotated types and constants
     interfaces/
         cli.py           # Rich-based terminal REPL
@@ -89,7 +94,10 @@ All `HAROLD_*` variables are loaded from a `.env` file automatically via pydanti
 | `HAROLD_LLM_MODEL` | `anthropic:claude-sonnet-4-20250514` | Pydantic AI model identifier |
 | `HAROLD_LLM_TEMPERATURE` | `0.85` | Sampling temperature (0.0-2.0) |
 | `HAROLD_MEMORY_BACKEND` | `in_memory` | Long-term memory backend (`in_memory` or `pgvector`) |
-| `HAROLD_TRAJECTORY_BACKEND` | `in_memory` | Trajectory memory backend |
+| `HAROLD_TRAJECTORY_BACKEND` | `in_memory` | Trajectory memory backend (`in_memory` or `neo4j`) |
+| `HAROLD_NEO4J_URI` | `neo4j://localhost:7687` | Neo4j connection URI (required for neo4j) |
+| `HAROLD_NEO4J_USER` | `neo4j` | Neo4j authentication username |
+| `HAROLD_NEO4J_PASSWORD` | `None` | Neo4j authentication password (required for neo4j) |
 | `HAROLD_PG_DSN` | `None` | PostgreSQL connection string (required for pgvector) |
 | `HAROLD_EMBEDDING_MODEL` | `openai:text-embedding-3-small` | Pydantic AI embedding model identifier |
 | `HAROLD_EMBEDDING_DIMENSIONS` | `1536` | Dimensionality of embedding vectors |
@@ -110,6 +118,7 @@ uv run uvicorn harold.interfaces.api:app --reload
 
 - **`GET /health`** — Health check returning status and version
 - **`WebSocket /ws/{session_id}`** — Streaming improv session
+- **`POST /coach/{session_id}`** — On-demand coaching feedback
 
 The WebSocket accepts JSON messages `{"type": "message", "content": "..."}` and streams back partial text chunks (`{"type": "stream", "content": "..."}`) followed by the complete structured response (`{"type": "response", "dialogue": "...", ...}`).
 

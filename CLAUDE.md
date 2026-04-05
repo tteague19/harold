@@ -43,7 +43,7 @@ HAROLD_PHOENIX_ENABLED=true uv run harold      # Run with tracing enabled
 
 - **Pydantic AI**: Agent orchestration, tools, dependency injection, conversation history
 - **BAML**: Prompt templates and standalone structured extractions (in `baml_src/`)
-- **Memory**: Protocol-based backends (in-memory MVP, pgvector and Neo4j planned)
+- **Memory**: Protocol-based backends (in-memory, pgvector for vectors, Neo4j for trajectory graphs)
 - **Interfaces**: CLI (`interfaces/cli.py`) and FastAPI WebSocket (`interfaces/api.py`)
 
 ## Code Style
