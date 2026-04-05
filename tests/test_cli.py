@@ -14,11 +14,8 @@ from rich.console import Console
 
 from harold.bootstrap import build_dependencies
 from harold.config import HaroldSettings
-from harold.interfaces.cli import (
-    QuitCommand,
-    _is_quit_command,
-    render_response,
-)
+from harold.interfaces.cli import QuitCommand, _is_quit_command
+from harold.interfaces.rendering import render_response
 from harold.memory.backends.in_memory import (
     InMemoryLongTermMemory,
     InMemoryTrajectoryMemory,

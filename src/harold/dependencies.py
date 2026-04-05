@@ -12,6 +12,8 @@ from pydantic_ai.messages import ModelMessage
 
 from harold.config import HaroldSettings
 from harold.memory.base import LongTermMemory, TrajectoryMemory
+from harold.models.character import Character
+from harold.models.harold_format import HaroldShow
 from harold.models.scene import SceneState
 
 
@@ -27,6 +29,11 @@ class HaroldDependencies:
             continuity across agent runs.
         current_scene: The in-progress scene state, or ``None`` if no
             scene is active.
+        active_character: The character Harold is currently playing,
+            or ``None`` for default behavior.
+        characters: Available characters for multi-character scenes.
+        harold_show: The active Harold format show, or ``None``
+            if not running a Harold.
     """
 
     settings: HaroldSettings
@@ -34,3 +41,6 @@ class HaroldDependencies:
     trajectory_memory: TrajectoryMemory
     message_history: list[ModelMessage] = field(default_factory=list)
     current_scene: SceneState | None = None
+    active_character: Character | None = None
+    characters: list[Character] = field(default_factory=list)
+    harold_show: HaroldShow | None = None

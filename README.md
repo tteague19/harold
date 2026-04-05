@@ -119,6 +119,7 @@ uv run uvicorn harold.interfaces.api:app --reload
 - **`GET /health`** — Health check returning status and version
 - **`WebSocket /ws/{session_id}`** — Streaming improv session
 - **`POST /coach/{session_id}`** — On-demand coaching feedback
+- **`POST /analyze`** — Discover workflow patterns from trajectory data
 
 The WebSocket accepts JSON messages `{"type": "message", "content": "..."}` and streams back partial text chunks (`{"type": "stream", "content": "..."}`) followed by the complete structured response (`{"type": "response", "dialogue": "...", ...}`).
 

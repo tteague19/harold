@@ -38,6 +38,22 @@ TechniqueThreshold = Annotated[
 ]
 """A non-negative integer threshold for technique usage frequency."""
 
+SummaryTruncation = Annotated[
+    int,
+    Field(
+        ge=1,
+        le=1000,
+        description="Maximum character length for truncated summaries",
+    ),
+]
+"""A positive integer capping summary text length."""
+
+SceneNumber = Annotated[
+    int,
+    Field(ge=1, le=10, description="1-based scene index within a show"),
+]
+"""A positive integer identifying a scene's position in a Harold show."""
+
 DEFAULT_SEARCH_LIMIT = 5
 DEFAULT_SCENE_RECALL_LIMIT = 3
 DEFAULT_KNOWLEDGE_RECALL_LIMIT = 2

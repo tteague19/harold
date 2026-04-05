@@ -109,3 +109,83 @@ async def workflow_context(
         "Relevant improv patterns from your history:\n"
         + "\n".join(formatted)
     )
+
+
+@scene_partner.system_prompt
+async def character_context(
+    ctx: RunContext[HaroldDependencies],
+) -> str:
+    """Inject active character traits into the system prompt.
+
+    When a character is active, instructs the agent to embody that
+    character's personality and speaking style.
+
+    Args:
+        ctx: The run context providing access to the dependency
+            container and the active character.
+
+    Returns:
+        A string describing the character to play, or an empty
+        string if no character is active.
+    """
+    character = ctx.deps.active_character
+    if not character:
+        return ""
+
+    return (
+        f"You are playing the character '{character.name}'. "
+        f"Personality: {character.personality}. "
+        f"Speaking style: {character.speaking_style}. "
+        f"Stay in character at all times."
+    )
+
+
+@scene_partner.system_prompt
+async def harold_format_context(
+    ctx: RunContext[HaroldDependencies],
+) -> str:
+    """Inject Harold format context into the system prompt.
+
+    When a Harold show is active, provides the suggestion,
+    opening themes, and summaries of previous scenes to enable
+    callbacks and thematic connections.
+
+    Args:
+        ctx: The run context providing access to the dependency
+            container and the Harold show state.
+
+    Returns:
+        A string describing the Harold format context, or an
+        empty string if no Harold show is active.
+    """
+    show = ctx.deps.harold_show
+    if not show:
+        return ""
+
+    parts = [
+        f"You are performing a Harold format show. "
+        f"Audience suggestion: '{show.suggestion}'."
+    ]
+
+    if show.opening_summary:
+        parts.append(
+            f"Opening themes: {show.opening_summary}"
+        )
+
+    if show.scene_summaries:
+        previous = "\n".join(
+            f"  Scene {i + 1}: {s}"
+            for i, s in enumerate(show.scene_summaries)
+        )
+        parts.append(
+            f"Previous scenes:\n{previous}\n"
+            f"Make callbacks to earlier scenes and "
+            f"explore thematic connections."
+        )
+
+    scene_number = len(show.scene_summaries) + 1
+    parts.append(
+        f"This is scene {scene_number} of {show.total_scenes}."
+    )
+
+    return "\n".join(parts)
