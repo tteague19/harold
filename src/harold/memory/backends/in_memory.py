@@ -21,6 +21,7 @@ from harold.models.types import (
     SearchQuery,
     TechniqueThreshold,
 )
+from harold.models.workflow import ImprovWorkflow
 
 
 class InMemoryLongTermMemory:
@@ -121,8 +122,9 @@ class InMemoryTrajectoryMemory:
     """
 
     def __init__(self) -> None:
-        """Initialize with an empty scene record."""
+        """Initialize with empty scene and workflow stores."""
         self._scenes: list[SceneSummary] = []
+        self._workflows: list[ImprovWorkflow] = []
 
     async def record_scene(self, scene: SceneSummary) -> None:
         """Record a completed scene as a node in the trajectory graph.
@@ -187,3 +189,57 @@ class InMemoryTrajectoryMemory:
             for technique in CORE_TECHNIQUES
             if frequency.get(technique, 0) < threshold
         ]
+
+    async def store_workflow(
+        self, workflow: ImprovWorkflow
+    ) -> None:
+        """Persist a discovered workflow template.
+
+        Args:
+            workflow: The workflow to append to the store.
+        """
+        self._workflows.append(workflow)
+
+    async def get_workflows_for_scene(
+        self,
+        scene_description: str,
+        limit: SearchLimit = DEFAULT_SEARCH_LIMIT,
+    ) -> list[ImprovWorkflow]:
+        """Retrieve workflows relevant to a scene description.
+
+        Scores each workflow by keyword overlap between the scene
+        description and the workflow's trigger description and
+        scene type.
+
+        Args:
+            scene_description: A description of the current scene
+                context to match workflows against.
+            limit: Maximum number of workflows to return.
+
+        Returns:
+            A list of matching workflows sorted by relevance,
+            excluding workflows with zero keyword overlap.
+        """
+        description_lower = scene_description.lower()
+        tokens = description_lower.split()
+        scored = [
+            (
+                w,
+                sum(
+                    t in w.trigger_description.lower()
+                    or t in w.scene_type.lower()
+                    for t in tokens
+                ),
+            )
+            for w in self._workflows
+        ]
+        scored.sort(key=lambda pair: pair[1], reverse=True)
+        return [w for w, score in scored[:limit] if score > 0]
+
+    async def get_all_workflows(self) -> list[ImprovWorkflow]:
+        """Retrieve all stored workflow templates.
+
+        Returns:
+            A list of all stored workflows.
+        """
+        return list(self._workflows)

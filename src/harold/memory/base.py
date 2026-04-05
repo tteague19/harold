@@ -20,6 +20,7 @@ from harold.models.types import (
     SearchQuery,
     TechniqueThreshold,
 )
+from harold.models.workflow import ImprovWorkflow
 
 
 @runtime_checkable
@@ -143,5 +144,40 @@ class TrajectoryMemory(Protocol):
         Returns:
             A list of technique names that are underused or never
             used, in the order they appear in ``CORE_TECHNIQUES``.
+        """
+        ...
+
+    async def store_workflow(
+        self, workflow: ImprovWorkflow
+    ) -> None:
+        """Persist a discovered workflow template.
+
+        Args:
+            workflow: The workflow to store.
+        """
+        ...
+
+    async def get_workflows_for_scene(
+        self,
+        scene_description: str,
+        limit: SearchLimit = DEFAULT_SEARCH_LIMIT,
+    ) -> list[ImprovWorkflow]:
+        """Retrieve workflows relevant to a scene description.
+
+        Args:
+            scene_description: A description of the current scene
+                context to match workflows against.
+            limit: Maximum number of workflows to return.
+
+        Returns:
+            A list of matching workflows ordered by relevance.
+        """
+        ...
+
+    async def get_all_workflows(self) -> list[ImprovWorkflow]:
+        """Retrieve all stored workflow templates.
+
+        Returns:
+            A list of all stored workflows.
         """
         ...

@@ -15,19 +15,23 @@ from rich.console import Console
 from rich.prompt import Prompt
 
 from harold.agents.coach import coach
+from harold.agents.pattern_analyzer import pattern_analyzer
 from harold.agents.scene_partner import scene_partner
 from harold.bootstrap import build_dependencies
 from harold.config import HaroldSettings
 from harold.dependencies import HaroldDependencies
 from harold.models.coaching import CoachingFeedback
+from harold.models.workflow import ImprovWorkflow
 from harold.observability import setup_observability
 
 GREETING = "[bold green]Harold[/] — Your AI Improv Partner"
 INSTRUCTIONS = (
     "Start a scene by saying something in character, "
-    "type '/coach' for feedback, or 'quit' to exit.\n"
+    "type '/coach' for feedback, '/analyze' to discover "
+    "patterns, or 'quit' to exit.\n"
 )
 COACH_COMMAND = "/coach"
+ANALYZE_COMMAND = "/analyze"
 FAREWELL = "[dim]Scene over. Thanks for playing![/]"
 USER_PROMPT_STYLE = "[bold blue]You[/]"
 HAROLD_PROMPT_STYLE = "[bold yellow]Harold[/]"
@@ -135,6 +139,56 @@ async def run_coaching(
     render_coaching_feedback(console, result.output)
 
 
+def render_workflows(
+    console: Console,
+    workflows: list[ImprovWorkflow],
+) -> None:
+    """Display discovered workflow patterns with Rich formatting.
+
+    Args:
+        console: The Rich console instance for output.
+        workflows: The list of discovered workflows to render.
+    """
+    console.print(
+        f"\n[bold magenta]Discovered {len(workflows)} "
+        f"workflow pattern(s)[/]\n"
+    )
+    for workflow in workflows:
+        techniques = " → ".join(workflow.technique_sequence)
+        console.print(f"[bold]{workflow.name}[/] ({workflow.scene_type})")
+        console.print(f"  {workflow.description}")
+        console.print(f"  Techniques: {techniques}")
+        console.print(f"  Trigger: {workflow.trigger_description}")
+        console.print(f"  Example: {workflow.example_summary}")
+        console.print(f"  Used in {workflow.success_count} scene(s)\n")
+
+
+async def run_analysis(
+    settings: HaroldSettings,
+    dependencies: HaroldDependencies,
+    console: Console,
+) -> None:
+    """Run the pattern analyzer and store discovered workflows.
+
+    Args:
+        settings: Application configuration for model selection.
+        dependencies: The wired dependency container for the agent.
+        console: The Rich console instance for output.
+    """
+    console.print("[dim]Analyzing trajectory data for patterns...[/]")
+    result = await pattern_analyzer.run(
+        "Analyze my scene history and extract reusable workflow patterns.",
+        deps=dependencies,
+        model=settings.llm_model,
+    )
+
+    workflows = result.output
+    for workflow in workflows:
+        await dependencies.trajectory_memory.store_workflow(workflow)
+
+    render_workflows(console, workflows)
+
+
 async def run_session(
     settings: HaroldSettings,
     dependencies: HaroldDependencies,
@@ -165,6 +219,10 @@ async def run_session(
 
         if user_input.strip().lower() == COACH_COMMAND:
             await run_coaching(settings, dependencies, console)
+            continue
+
+        if user_input.strip().lower() == ANALYZE_COMMAND:
+            await run_analysis(settings, dependencies, console)
             continue
 
         result = await scene_partner.run(

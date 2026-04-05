@@ -25,11 +25,13 @@ from pydantic import BaseModel, Field
 from pydantic_ai.messages import ModelMessage
 
 from harold.agents.coach import coach
+from harold.agents.pattern_analyzer import pattern_analyzer
 from harold.agents.scene_partner import scene_partner
 from harold.bootstrap import build_dependencies
 from harold.config import HaroldSettings
 from harold.dependencies import HaroldDependencies
 from harold.models.coaching import CoachingFeedback
+from harold.models.workflow import ImprovWorkflow
 from harold.observability import setup_observability
 
 logger = logging.getLogger(__name__)
@@ -272,6 +274,35 @@ async def request_coaching(session_id: str) -> CoachingFeedback:
         deps=dependencies,
         model=settings.llm_model,
     )
+    return result.output
+
+
+@app.post(
+    "/analyze",
+    response_model=list[ImprovWorkflow],
+)
+async def analyze_patterns() -> list[ImprovWorkflow]:
+    """Run the pattern analyzer and store discovered workflows.
+
+    Analyzes trajectory data to discover reusable improv patterns,
+    stores them in the trajectory memory, and returns the results.
+
+    Returns:
+        A list of discovered ``ImprovWorkflow`` templates.
+    """
+    settings: HaroldSettings = app.state.settings
+    dependencies: HaroldDependencies = app.state.dependencies
+
+    result = await pattern_analyzer.run(
+        "Analyze my scene history and extract reusable "
+        "workflow patterns.",
+        deps=dependencies,
+        model=settings.llm_model,
+    )
+
+    for workflow in result.output:
+        await dependencies.trajectory_memory.store_workflow(workflow)
+
     return result.output
 
 

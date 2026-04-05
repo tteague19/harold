@@ -9,6 +9,7 @@ detection.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from neo4j import AsyncDriver, AsyncGraphDatabase
 
@@ -17,10 +18,13 @@ from harold.models.scene import SceneSummary
 from harold.models.techniques import CORE_TECHNIQUES
 from harold.models.types import (
     DEFAULT_RECENT_SCENES_LIMIT,
+    DEFAULT_SEARCH_LIMIT,
     DEFAULT_UNDERUSED_THRESHOLD,
     SceneLimit,
+    SearchLimit,
     TechniqueThreshold,
 )
+from harold.models.workflow import ImprovWorkflow
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +71,61 @@ RETURN s.id AS id, s.setting AS setting,
 ORDER BY s.created_at DESC
 LIMIT $limit
 """
+
+STORE_WORKFLOW_CYPHER = """\
+MERGE (w:Workflow {name: $name})
+SET w.description = $description,
+    w.scene_type = $scene_type,
+    w.technique_sequence = $technique_sequence,
+    w.trigger_description = $trigger_description,
+    w.example_summary = $example_summary,
+    w.success_count = $success_count
+"""
+
+WORKFLOWS_FOR_SCENE_CYPHER = """\
+MATCH (w:Workflow)
+WHERE toLower(w.trigger_description) CONTAINS toLower($search)
+   OR toLower(w.scene_type) CONTAINS toLower($search)
+RETURN w.name AS name, w.description AS description,
+       w.scene_type AS scene_type,
+       w.technique_sequence AS technique_sequence,
+       w.trigger_description AS trigger_description,
+       w.example_summary AS example_summary,
+       w.success_count AS success_count
+ORDER BY w.success_count DESC
+LIMIT $limit
+"""
+
+ALL_WORKFLOWS_CYPHER = """\
+MATCH (w:Workflow)
+RETURN w.name AS name, w.description AS description,
+       w.scene_type AS scene_type,
+       w.technique_sequence AS technique_sequence,
+       w.trigger_description AS trigger_description,
+       w.example_summary AS example_summary,
+       w.success_count AS success_count
+ORDER BY w.success_count DESC
+"""
+
+
+def _record_to_workflow(record: Any) -> ImprovWorkflow:
+    """Convert a Neo4j record to an ImprovWorkflow model.
+
+    Args:
+        record: A Neo4j record containing workflow fields.
+
+    Returns:
+        An ImprovWorkflow populated from the record.
+    """
+    return ImprovWorkflow(
+        name=record["name"],
+        description=record["description"],
+        scene_type=record["scene_type"],
+        technique_sequence=list(record["technique_sequence"]),
+        trigger_description=record["trigger_description"],
+        example_summary=record["example_summary"],
+        success_count=record["success_count"],
+    )
 
 
 class Neo4jTrajectoryMemory:
@@ -236,3 +295,63 @@ class Neo4jTrajectoryMemory:
             for technique in CORE_TECHNIQUES
             if frequency.get(technique, 0) < threshold
         ]
+
+    async def store_workflow(
+        self, workflow: ImprovWorkflow
+    ) -> None:
+        """Persist a discovered workflow template as a graph node.
+
+        Args:
+            workflow: The workflow to store.
+        """
+        async with self._driver.session() as session:
+            await session.run(
+                STORE_WORKFLOW_CYPHER,
+                name=workflow.name,
+                description=workflow.description,
+                scene_type=workflow.scene_type,
+                technique_sequence=workflow.technique_sequence,
+                trigger_description=workflow.trigger_description,
+                example_summary=workflow.example_summary,
+                success_count=workflow.success_count,
+            )
+
+    async def get_workflows_for_scene(
+        self,
+        scene_description: str,
+        limit: SearchLimit = DEFAULT_SEARCH_LIMIT,
+    ) -> list[ImprovWorkflow]:
+        """Retrieve workflows relevant to a scene description.
+
+        Searches workflow nodes by keyword overlap with the scene
+        description in trigger descriptions and scene types.
+
+        Args:
+            scene_description: A description of the current scene
+                context to match workflows against.
+            limit: Maximum number of workflows to return.
+
+        Returns:
+            A list of matching workflows ordered by success count.
+        """
+        async with self._driver.session() as session:
+            result = await session.run(
+                WORKFLOWS_FOR_SCENE_CYPHER,
+                search=scene_description,
+                limit=limit,
+            )
+            records = [record async for record in result]
+
+        return [_record_to_workflow(record) for record in records]
+
+    async def get_all_workflows(self) -> list[ImprovWorkflow]:
+        """Retrieve all stored workflow templates.
+
+        Returns:
+            A list of all stored workflows ordered by success count.
+        """
+        async with self._driver.session() as session:
+            result = await session.run(ALL_WORKFLOWS_CYPHER)
+            records = [record async for record in result]
+
+        return [_record_to_workflow(record) for record in records]

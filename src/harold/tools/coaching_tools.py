@@ -40,12 +40,17 @@ async def get_technique_summary(
     if not frequency:
         return f"No techniques recorded across {scene_count} scenes."
 
-    lines = [f"Technique usage across {scene_count} scenes:"]
-    for technique, count in sorted(
+    sorted_items = sorted(
         frequency.items(), key=lambda pair: pair[1], reverse=True
-    ):
-        lines.append(f"  {technique}: {count}")
-    return "\n".join(lines)
+    )
+    detail_lines = [
+        f"  {technique}: {count}"
+        for technique, count in sorted_items
+    ]
+    return "\n".join(
+        [f"Technique usage across {scene_count} scenes:"]
+        + detail_lines
+    )
 
 
 @coach.tool
@@ -69,12 +74,12 @@ async def get_recent_scene_summaries(
     if not scenes:
         return "No scenes have been recorded yet."
 
-    lines = []
-    for scene in scenes:
-        lines.append(
-            f"Scene '{scene.setting}' (suggestion: '{scene.suggestion}'): "
-            f"{scene.summary}"
-        )
+    lines = [
+        f"Scene '{scene.setting}' "
+        f"(suggestion: '{scene.suggestion}'): "
+        f"{scene.summary}"
+        for scene in scenes
+    ]
     return "\n".join(lines)
 
 

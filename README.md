@@ -164,11 +164,12 @@ uv run harold
 
 When using pgvector, the agent embeds scene summaries and knowledge entries via OpenAI's `text-embedding-3-small` model and stores them alongside their vectors. Searches use cosine similarity instead of keyword matching.
 
-## Coaching
+## Coaching and Pattern Analysis
 
-Harold includes an on-demand coaching agent that analyzes your improv history and provides UCB-grounded feedback.
+Harold includes two on-demand analysis features:
 
-In the CLI, type `/coach` at any time. Via the API, send `POST /coach/{session_id}`. The coach examines your technique usage, recent scenes, and growth areas to provide specific, actionable advice.
+- **`/coach`** — A coaching agent that examines your technique usage, recent scenes, and growth areas to provide UCB-grounded feedback. Via the API: `POST /coach/{session_id}`.
+- **`/analyze`** — A pattern analyzer that discovers reusable workflow templates from your scene history. Discovered workflows are automatically injected into the scene partner's context on future scenes. Via the API: `POST /analyze`.
 
 To enable rich trajectory tracking, use the Neo4j backend:
 

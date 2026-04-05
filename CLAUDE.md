@@ -40,6 +40,8 @@ HAROLD_PHOENIX_ENABLED=true uv run harold      # Run with tracing enabled
 uv run python scripts/smoke_test.py            # Programmatic smoke test
 uv run python evals/run_evals.py               # Run improv quality eval suite
 
+# In the CLI: /coach for feedback, /analyze to discover workflow patterns
+
 # All HAROLD_* vars and API keys can also be set in .env (loaded automatically)
 ```
 
