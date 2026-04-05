@@ -18,6 +18,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from enum import StrEnum
 
+import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -320,8 +321,6 @@ def run() -> None:
 
     Used as the ``harold-api`` console script entry point.
     """
-    import uvicorn
-
     uvicorn.run(
         "harold.interfaces.api:app",
         host=DEFAULT_API_HOST,

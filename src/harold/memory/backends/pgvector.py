@@ -115,6 +115,14 @@ class PgVectorLongTermMemory:
         self._pool = pool
         self._settings = settings
 
+    async def close(self) -> None:
+        """Close the connection pool and release database resources.
+
+        Should be called at application shutdown to ensure clean
+        teardown of database connections.
+        """
+        await self._pool.close()
+
     @classmethod
     async def create(cls, settings: HaroldSettings) -> PgVectorLongTermMemory:
         """Async factory that creates the pool and runs migrations.

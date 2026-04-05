@@ -131,14 +131,17 @@ class TrajectoryMemory(Protocol):
     ) -> list[str]:
         """Return techniques used fewer times than the threshold.
 
-        Compares observed technique usage against a reference set of
-        core UCB improv techniques.
+        Compares observed technique usage against the shared
+        ``CORE_TECHNIQUES`` list from ``harold.models.techniques``
+        (e.g. "yes-and", "heightening", "callback"). Implementations
+        should import this list rather than defining their own.
 
         Args:
             threshold: Techniques used fewer than this many times
                 are considered underused.
 
         Returns:
-            A list of technique names that are underused or never used.
+            A list of technique names that are underused or never
+            used, in the order they appear in ``CORE_TECHNIQUES``.
         """
         ...

@@ -11,6 +11,7 @@ from collections import Counter
 
 from harold.models.memory import KnowledgeEntry
 from harold.models.scene import SceneSummary
+from harold.models.techniques import CORE_TECHNIQUES
 from harold.models.types import (
     DEFAULT_RECENT_SCENES_LIMIT,
     DEFAULT_SEARCH_LIMIT,
@@ -20,17 +21,6 @@ from harold.models.types import (
     SearchQuery,
     TechniqueThreshold,
 )
-
-CORE_TECHNIQUES = [
-    "yes-and",
-    "heightening",
-    "callback",
-    "game-of-the-scene",
-    "emotional-truth",
-    "strong-choices",
-    "group-mind",
-    "if-this-is-true",
-]
 
 
 class InMemoryLongTermMemory:

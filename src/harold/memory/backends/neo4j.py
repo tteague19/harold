@@ -14,6 +14,7 @@ from neo4j import AsyncDriver, AsyncGraphDatabase
 
 from harold.config import HaroldSettings
 from harold.models.scene import SceneSummary
+from harold.models.techniques import CORE_TECHNIQUES
 from harold.models.types import (
     DEFAULT_RECENT_SCENES_LIMIT,
     DEFAULT_UNDERUSED_THRESHOLD,
@@ -23,22 +24,13 @@ from harold.models.types import (
 
 logger = logging.getLogger(__name__)
 
-CORE_TECHNIQUES = [
-    "yes-and",
-    "heightening",
-    "callback",
-    "game-of-the-scene",
-    "emotional-truth",
-    "strong-choices",
-    "group-mind",
-    "if-this-is-true",
-]
-
 SCHEMA_CYPHER = [
-    "CREATE CONSTRAINT scene_id IF NOT EXISTS FOR (s:Scene) REQUIRE s.id IS UNIQUE",
+    "CREATE CONSTRAINT scene_id IF NOT EXISTS "
+    "FOR (s:Scene) REQUIRE s.id IS UNIQUE",
     "CREATE CONSTRAINT technique_name IF NOT EXISTS "
     "FOR (t:Technique) REQUIRE t.name IS UNIQUE",
-    "CREATE INDEX scene_created_at IF NOT EXISTS FOR (s:Scene) ON (s.created_at)",
+    "CREATE INDEX scene_created_at IF NOT EXISTS "
+    "FOR (s:Scene) ON (s.created_at)",
 ]
 
 RECORD_SCENE_CYPHER = """\
@@ -64,9 +56,14 @@ SCENE_COUNT_CYPHER = "MATCH (s:Scene) RETURN count(s) AS count"
 
 RECENT_SCENES_CYPHER = """\
 MATCH (s:Scene)
-RETURN s.id AS id, s.setting AS setting, s.suggestion AS suggestion,
-       s.summary AS summary, s.key_moments AS key_moments,
-       s.duration_turns AS duration_turns
+OPTIONAL MATCH (s)-[:USES_TECHNIQUE]->(t:Technique)
+WITH s, collect(t.name) AS techniques
+RETURN s.id AS id, s.setting AS setting,
+       s.suggestion AS suggestion,
+       s.summary AS summary,
+       s.key_moments AS key_moments,
+       s.duration_turns AS duration_turns,
+       techniques
 ORDER BY s.created_at DESC
 LIMIT $limit
 """
@@ -130,6 +127,14 @@ class Neo4jTrajectoryMemory:
         )
         return cls(driver)
 
+    async def close(self) -> None:
+        """Close the Neo4j driver and release connection pool resources.
+
+        Should be called at application shutdown to ensure clean
+        teardown of database connections.
+        """
+        await self._driver.close()
+
     async def record_scene(self, scene: SceneSummary) -> None:
         """Record a completed scene and its techniques in the graph.
 
@@ -181,13 +186,14 @@ class Neo4jTrajectoryMemory:
     async def get_recent_scenes(
         self, limit: SceneLimit = DEFAULT_RECENT_SCENES_LIMIT
     ) -> list[SceneSummary]:
-        """Return the most recently recorded scenes.
+        """Return the most recently recorded scenes with their techniques.
 
         Args:
             limit: Maximum number of scenes to return.
 
         Returns:
-            A list of scene summaries ordered by most recent first.
+            A list of scene summaries ordered by most recent first,
+            with techniques populated from graph relationships.
         """
         async with self._driver.session() as session:
             result = await session.run(
@@ -202,7 +208,7 @@ class Neo4jTrajectoryMemory:
                 suggestion=record["suggestion"],
                 summary=record["summary"],
                 key_moments=list(record["key_moments"]),
-                techniques_used=[],
+                techniques_used=record["techniques"] or [],
                 duration_turns=record["duration_turns"],
             )
             for record in records
@@ -214,7 +220,8 @@ class Neo4jTrajectoryMemory:
     ) -> list[str]:
         """Return core techniques used fewer times than the threshold.
 
-        Compares observed technique usage against ``CORE_TECHNIQUES``.
+        Compares observed technique usage against the shared
+        ``CORE_TECHNIQUES`` reference list.
 
         Args:
             threshold: Techniques used fewer than this many times

@@ -109,3 +109,29 @@ async def test_neo4j_recent_scenes(
 
     assert len(recent) >= 1
     assert any(s.scene_id == INTEGRATION_SCENE_ID for s in recent)
+
+
+@pytest.mark.integration
+async def test_neo4j_scene_techniques_persisted(
+    integration_settings: HaroldSettings,
+    scene_summary: SceneSummary,
+) -> None:
+    """Verify that techniques are persisted and retrieved with scenes.
+
+    Args:
+        integration_settings: Settings configured for Neo4j.
+        scene_summary: The sample scene summary to record.
+    """
+    memory = await Neo4jTrajectoryMemory.create(integration_settings)
+
+    await memory.record_scene(scene_summary)
+    recent = await memory.get_recent_scenes(limit=1)
+
+    assert len(recent) >= 1
+    matched = [
+        s for s in recent if s.scene_id == INTEGRATION_SCENE_ID
+    ]
+    assert len(matched) == 1
+    assert set(matched[0].techniques_used) == set(
+        INTEGRATION_TECHNIQUES
+    )

@@ -1,8 +1,9 @@
 """Agent tools for the coaching agent to query trajectory memory.
 
-These tools are registered on the coaching agent and provide access
-to the user's improv history for pattern analysis and feedback
-generation.
+These tools are registered on the coaching agent via the ``@coach.tool``
+decorator and provide access to the user's improv history for pattern
+analysis and feedback generation. Each tool queries the trajectory
+memory backend to support UCB-grounded coaching feedback.
 """
 
 from __future__ import annotations
